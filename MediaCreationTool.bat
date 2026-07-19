@@ -3,7 +3,7 @@
 :: Nothing but Microsoft-hosted source links and no third-party tools; script just configures an xml and starts MCT
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI
 :: Changelog: 2026.07.19 fixed 25H2 media creation (pinned verified catalog + sanity check)
-:: - 25H2 uses a repo-hosted pinned catalog cab: 26200.6584 entries in the proven Sha1/v2.0 schema, ESD links on
+:: - 25H2 catalog ships in utils\ (pinned cab): 26200.6584 entries in the proven Sha1/v2.0 schema, ESD links on
 ::   Microsoft servers, sizes+hashes cross-verified between MS Download Center products.xml and files.rg-adguard.net
 :: - Why not live sources: catalog fwlink 2156292 serves a cab frozen 2025-06-16 (26100-only) inconsistently across
 ::   CDN nodes, and the Download Center 25H2 products.xml uses Sha256 while MCT selfhost expects Sha1 (0x80070490)
@@ -152,9 +152,8 @@ goto choice-%MCT%
 
 :choice-19
 set "VER=26200" & set "VID=11_25H2" & set "CB=26200.6584.250915-1905.25h2_ge_release_svc_refresh" & set "CT=2025/09/" & set "CC=2.0"
-set "CAB=https://raw.githubusercontent.com/javifly/MediaCreationTool.bat/main/utils/Products-Win11-25H2-6584.cab"
 set "EXE=https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/mediacreationtool.exe"
-goto process ::# windows 11 25H2 - pinned 26200.6584 catalog (Sha1 schema, MS-hosted ESD links, hashes cross-verified) - see README
+goto process ::# windows 11 25H2 - catalog ships in utils\products11_25H2.cab (pinned 26200.6584, verified) - see README
 
 :choice-18
 set "VER=26100" & set "VID=11_24H2" & set "CB=26100.4349.250607-1500.ge_release_svc_refresh" & set "CT=2025/06/" & set "CC=2.0"
@@ -394,10 +393,12 @@ if %PRE% leq 3 %<%:6f " %MEDIA_LANGCODE% "%>>%  &  %<%:9f " %MEDIA_CFG% "%>>%  &
 echo;
 
 ::# download MCT and CAB / XML - new snippet to try via bits, net, certutil, and insecure/secure
+::# utils-first: exe and catalog ship in utils\ next to the user script; downloads only fill the gaps
+::# note: script re-runs itself from %WORK% so %~dp0 is C:\ESD - %ROOT% holds the original script folder
+if exist "%ROOT%\utils\MediaCreationTool%VID%.exe" copy /y "%ROOT%\utils\MediaCreationTool%VID%.exe" MediaCreationTool%VID%.exe >nul 2>nul
+if exist "%ROOT%\utils\products%VID%.cab" copy /y "%ROOT%\utils\products%VID%.cab" products%VID%.cab >nul 2>nul
 if defined EXE echo;%EXE% & call :DOWNLOAD "%EXE%" MediaCreationTool%VID%.exe
-::# local-first: a catalog bundled in utils\ next to the script wins over any network source
-if exist "%~dp0utils\products%VID%.cab" copy /y "%~dp0utils\products%VID%.cab" products%VID%.cab >nul 2>nul
-if "%VID%"=="11_25H2" if exist "%~dp0utils\Products-Win11-25H2-6584.cab" copy /y "%~dp0utils\Products-Win11-25H2-6584.cab" products%VID%.cab >nul 2>nul
+if "%VID%"=="11_25H2" if not exist products%VID%.cab echo;ERROR: utils\products11_25H2.cab missing - download the FULL repo package: no reliable Microsoft source exists for the 25H2 catalog
 if defined XML del /f /q products%VID%.cab >nul 2>nul
 if defined XML echo;%XML% & call :DOWNLOAD "%XML%" products%VID%.xml
 if defined CAB echo;%CAB% & call :DOWNLOAD "%CAB%" products%VID%.cab
@@ -407,6 +408,10 @@ if exist products%VID%.cab expand.exe -R products%VID%.cab -F:* . >nul 2>nul
 set "/hint=Check urls in browser | del ESD dir | use powershell v3.0+ | unblock powershell | enable BITS serv"
 echo;& set err=& for %%s in (products.xml MediaCreationTool%VID%.exe) do if not exist %%s set err=1
 if %VER% geq 26100 if exist products.xml (findstr /m /c:"%VER%." products.xml >nul 2>nul || (set err=1& echo;ERROR: catalog does not list requested version %VER% - stale or wrong source, refusing to build wrong media))
+::# self-healing bundle: cache downloaded catalog and MCT exe into utils\ next to the user script (only after passing sanity)
+if not defined err if not exist "%ROOT%\utils\" md "%ROOT%\utils" >nul 2>nul
+if not defined err if exist products%VID%.cab if not exist "%ROOT%\utils\products%VID%.cab" copy /y products%VID%.cab "%ROOT%\utils\products%VID%.cab" >nul 2>nul && echo;cached catalog to utils\products%VID%.cab
+if not defined err if exist MediaCreationTool%VID%.exe if not exist "%ROOT%\utils\MediaCreationTool%VID%.exe" copy /y MediaCreationTool%VID%.exe "%ROOT%\utils\MediaCreationTool%VID%.exe" >nul 2>nul && echo;cached MCT exe to utils\MediaCreationTool%VID%.exe
 if defined err (%<%:4f " ERROR "%>>% & %<%:0f " %/hint% "%>%) else if not defined err %<%:0f " %PRESET% "%>%
 if defined err (del /f /q products%VID%.* MediaCreationTool%VID%.exe 2>nul & pause & exit /b1)
 

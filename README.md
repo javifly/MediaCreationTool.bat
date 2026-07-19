@@ -5,6 +5,7 @@ A powerful yet simple windows 10 / 11 deployment automation tool as well!
 
 **Now supports Windows 11 24H2 and 25H2 with enhanced TPM bypass!**  
 **2026.07 fix: the 25H2 choice now creates true 26200 media** _(previously it silently produced 24H2 / 26100)_  
+**New `utils\` local library** - bundled cabs/exes, Microsoft-only gap-filling, self-caching; see notes below  
 
 Presets  
 -------  
@@ -73,9 +74,11 @@ Finally, it sets recommended setup options with least amount of issues on upgrad
 
 Windows 11 25H2 media notes  
 ---------------------------  
-The 25H2 choice uses a **pinned catalog** (`utils/Products-Win11-25H2-6584.cab`), resolved local-first:  
-if the `utils\` folder ships next to the script (full repo download) the cab is taken from there with  
-zero network involved; otherwise it is fetched once from this repo via raw.githubusercontent.com.  
+**Download the FULL repo package** (script + `utils\` folder) - the script has zero dependencies on this  
+repo at runtime. `utils\` is the local library: exe and catalogs are always taken from there first; anything  
+missing is downloaded from **Microsoft only** and cached back into `utils\` for the next run (both catalogs  
+and MCT exes, one file per version: `products<VID>.cab` / `MediaCreationTool<VID>.exe`). The 25H2 catalog  
+(`utils/products11_25H2.cab`, pinned) has **no Microsoft source** - it must ship with the package.  
 Catalog contents:  
 build **26200.6584** (GA), es-ES + en-US, Consumer (Home/Pro/Edu) and Business (Pro VL/Enterprise), x64.  
 > _- ESD downloads still come from **Microsoft servers** - the cab only lists official links_  
