@@ -2,12 +2,18 @@
 :Universal MCT wrapper script for all Windows 10/11 versions from 1507 to 25H2!
 :: Nothing but Microsoft-hosted source links and no third-party tools; script just configures an xml and starts MCT
 :: Ingenious support for business editions (Enterprise / VL) selecting language, x86, x64 or AiO inside the MCT GUI
+:: Changelog: 2026.07.19 fixed 25H2 media creation (pinned verified catalog + sanity check)
+:: - 25H2 uses a repo-hosted pinned catalog cab: 26200.6584 entries in the proven Sha1/v2.0 schema, ESD links on
+::   Microsoft servers, sizes+hashes cross-verified between MS Download Center products.xml and files.rg-adguard.net
+:: - Why not live sources: catalog fwlink 2156292 serves a cab frozen 2025-06-16 (26100-only) inconsistently across
+::   CDN nodes, and the Download Center 25H2 products.xml uses Sha256 while MCT selfhost expects Sha1 (0x80070490)
+:: - Sanity check: abort with clear error if the fetched catalog does not list the requested version (no silent 24H2)
 :: Changelog: 2025.11.22 updated for 24H2 and 25H2
-:: - Added Windows 11 24H2 (26100.4349) and 25H2 (26200.6584) support
+:: - Added Windows 11 24H2 (26100.4349) and 25H2 support
 :: - Enhanced TPM/hardware bypass for 24H2/25H2 with HwReqChk and LabConfig registry keys
 :: - all issues ironed out; upgrade keeping files from Eval editions too; pickup $ISO$ dir content to add on media
 :: - DU in 11: auto installs 22000.556 atm; older skip_11_checks, without Server label; Home offline local account
-:: on upgrade: latest build, on offline install: 11 25H2 26200.6584 / 11 24H2 26100.4349 / 11 23H2 22631.2861 / 11 22H2 22621.1702 / 11 21H2 22000.318 / 22H2 19045.2965 / 21H2 19044.1288 / 21H1 19043.1348 / 20H2 19042.1052
+:: on upgrade: latest build, on offline install: 11 25H2 live catalog 26200.x / 11 24H2 26100.4349 / 11 23H2 22631.2861 / 11 22H2 22621.1702 / 11 21H2 22000.318 / 22H2 19045.2965 / 21H2 19044.1288 / 21H1 19043.1348 / 20H2 19042.1052
 
 ::# uncomment to skip GUI dialog for MCT choice: 1507 to 11 25H2 - or rename script: "25H2 MediaCreationTool.bat"
 rem set MCT=2510
@@ -145,10 +151,10 @@ if %MCT%0 gtr 1 if %PRE%0 lss 1 goto choice-0 = cancel
 goto choice-%MCT%
 
 :choice-19
-set "VER=26200" & set "VID=11_25H2" & set "CB=26200.8653+ live catalog" & set "CT=2026/06/" & set "CC=2.0"
-set "CAB=https://go.microsoft.com/fwlink/?LinkId=2156292"
+set "VER=26200" & set "VID=11_25H2" & set "CB=26200.6584.250915-1905.25h2_ge_release_svc_refresh" & set "CT=2025/09/" & set "CC=2.0"
+set "CAB=https://raw.githubusercontent.com/javifly/MediaCreationTool.bat/main/utils/Products-Win11-25H2-6584.cab"
 set "EXE=https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/mediacreationtool.exe"
-goto process ::# windows 11 25H2 - fwlink 2156292 = cab de catalogo vivo del MCT (formato nativo Sha1, siempre la build actual)
+goto process ::# windows 11 25H2 - pinned 26200.6584 catalog (Sha1 schema, MS-hosted ESD links, hashes cross-verified) - see README
 
 :choice-18
 set "VER=26100" & set "VID=11_24H2" & set "CB=26100.4349.250607-1500.ge_release_svc_refresh" & set "CT=2025/06/" & set "CC=2.0"
@@ -389,6 +395,9 @@ echo;
 
 ::# download MCT and CAB / XML - new snippet to try via bits, net, certutil, and insecure/secure
 if defined EXE echo;%EXE% & call :DOWNLOAD "%EXE%" MediaCreationTool%VID%.exe
+::# local-first: a catalog bundled in utils\ next to the script wins over any network source
+if exist "%~dp0utils\products%VID%.cab" copy /y "%~dp0utils\products%VID%.cab" products%VID%.cab >nul 2>nul
+if "%VID%"=="11_25H2" if exist "%~dp0utils\Products-Win11-25H2-6584.cab" copy /y "%~dp0utils\Products-Win11-25H2-6584.cab" products%VID%.cab >nul 2>nul
 if defined XML del /f /q products%VID%.cab >nul 2>nul
 if defined XML echo;%XML% & call :DOWNLOAD "%XML%" products%VID%.xml
 if defined CAB echo;%CAB% & call :DOWNLOAD "%CAB%" products%VID%.cab
@@ -397,6 +406,7 @@ if exist products%VID%.cab del /f /q products%VID%.xml >nul 2>nul
 if exist products%VID%.cab expand.exe -R products%VID%.cab -F:* . >nul 2>nul
 set "/hint=Check urls in browser | del ESD dir | use powershell v3.0+ | unblock powershell | enable BITS serv"
 echo;& set err=& for %%s in (products.xml MediaCreationTool%VID%.exe) do if not exist %%s set err=1
+if %VER% geq 26100 if exist products.xml (findstr /m /c:"%VER%." products.xml >nul 2>nul || (set err=1& echo;ERROR: catalog does not list requested version %VER% - stale or wrong source, refusing to build wrong media))
 if defined err (%<%:4f " ERROR "%>>% & %<%:0f " %/hint% "%>%) else if not defined err %<%:0f " %PRESET% "%>%
 if defined err (del /f /q products%VID%.* MediaCreationTool%VID%.exe 2>nul & pause & exit /b1)
 
