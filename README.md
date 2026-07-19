@@ -4,6 +4,7 @@ A powerful yet simple windows 10 / 11 deployment automation tool as well!
 *If you had no success launching the script so far, this latest version will work*
 
 **Now supports Windows 11 24H2 and 25H2 with enhanced TPM bypass!**  
+**2026.07 fix: the 25H2 choice now creates true 26200 media** _(previously it silently produced 24H2 / 26100)_  
 
 Presets  
 -------  
@@ -69,6 +70,19 @@ Finally, it sets recommended setup options with least amount of issues on upgrad
 >
 > Can even add a VL / MAK / retail product key in the same way to take care of licensing differences.  
 > The script also picks up any `$ISO$` folder in the current location - for $OEM$ branding, configuration, tweaks etc.  
+
+Windows 11 25H2 media notes  
+---------------------------  
+The 25H2 choice sources the **live MCT catalog** from Microsoft (`go.microsoft.com/fwlink/?LinkId=2156292`),  
+the same hidden URL the official Media Creation Tool checks on every run. This means:  
+> _- media is always built from the **current** 25H2 build (26200.x with the latest cumulative update baked in)_  
+> _- the build is **not pinned**: to freeze a specific build, keep a copy of the downloaded `products11_25H2.cab`_  
+> _from `C:\ESD\MCT` and point the `CAB` variable of `:choice-19` to it (local path or self-hosted URL)_  
+
+Why not other sources (lessons learned the hard way):  
+> _- the 24H2 `Products-Win11-24H2-6B.cab` only lists 26100 builds - using it for 25H2 silently creates 24H2 media_  
+> _- the Download Center 25H2 `products.xml` (id=108396) uses `Sha256` entries, while MCT selfhost expects `Sha1`,_  
+> _failing with error `0x80070490 - 0x20018` (element not found)_  
 
 Changelog  
 ---------  
@@ -142,4 +156,9 @@ _We did it! We broke [the previous gist](https://git.io/MediaCreationTool.bat)_ 
             - Maintains all existing bypass mechanisms (appraiserres.dll, winsetup.dll patching)
             - 25H2 uses 24H2 products.cab as both share the same servicing branch
             Default version updated from 23H2 to 25H2
+2026.07.19: fixed 25H2 media creation
+            25H2 choice was producing 24H2 (26100) media: the referenced 24H2 products.cab only lists 26100 builds
+            25H2 now sources the live MCT catalog via fwlink 2156292 (native Sha1 cab, always current 26200.x build)
+            documented why the Download Center 25H2 products.xml cannot be used (Sha256 schema -> MCT 0x80070490)
+            added guard clearing stale per-version cab when an XML source is defined (downloader skips existing files)
 ```
