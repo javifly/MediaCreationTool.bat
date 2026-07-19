@@ -522,7 +522,12 @@ EXIT
    if ('Select' -ne $env:PRESET) { try {
      $win = [Windows.Automation.AutomationElement]::FromHandle($set.MainWindowHandle); $nr = $win.FindAll(5, $bt[0]).Count
      if ($env:VER -le 15063) {while ($win.FindAll(5,$bt[1]).Count -lt 3) {if ($mct.HasExited) {break :mct}; sleep -m 200}; Enter}
-     while ($win.FindAll(5,$bt[0]).Count -le $nr) {if ($mct.HasExited) {break :mct}; sleep -m 200}; $all = $win.FindAll(5,$bt[0])
+     #:: 25H2 upgrade can land on an extra "choose media" screen (6 buttons incl. Next id=20002) the loop never
+     #:: expected; if we stall there, click Next (by AutomationId, locale-independent) to continue the upgrade
+     $sp=0; while ($win.FindAll(5,$bt[0]).Count -le $nr) {if ($mct.HasExited) {break :mct}; $sp++
+       if ('Auto Upgrade' -eq $env:PRESET -and $env:VID -eq '11_25H2' -and $sp -ge 25 -and $sp % 25 -eq 0) { $nx = $win.FindAll(5,$bt[0]) |? {$_.Current.AutomationId -eq '20002' -and $_.Current.IsEnabled}
+         if ($nx) { try { $nx[0].SetFocus(); $nx[0].GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke() } catch { Enter } } }
+       sleep -m 200}; $all = $win.FindAll(5,$bt[0])
      $all[$id].GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select();$all[$all.Count-1].SetFocus(); Enter
      if ('Auto USB' -ne $env:PRESET) {
        while ($win.FindAll(5,$bt[2]).Count -le 0) {if ($mct.HasExited) {break :mct};sleep -m 50}; $val = $win.FindAll(5,$bt[2])[0]
