@@ -3,7 +3,8 @@ Not just an Universal MediaCreationTool wrapper script with ingenious support fo
 A powerful yet simple windows 10 / 11 deployment automation tool as well!
 *If you had no success launching the script so far, this latest version will work*
 
-**Now supports Windows 11 24H2 and 25H2 with enhanced TPM bypass!**  
+**Now supports Windows 11 24H2, 25H2 and 26H2 with enhanced TPM bypass!**  
+**2026.10: added Windows 11 26H2 (26300.9457) - new default choice**  
 **2026.07 fix: the 25H2 choice now creates true 26200 media** _(previously it silently produced 24H2 / 26100)_  
 **New `utils\` local library** - bundled cabs/exes, Microsoft-only gap-filling, self-caching; see notes below  
 
@@ -13,7 +14,7 @@ Presets
 > _- can keep files and apps on more scenarios where os and target edition does not match_  
 > _- can switch detected edition by adding EditionID to script name_  
 > _- can troubleshoot upgrade failing by adding `no_update` to script name_  
-> _- auto defaults to 11 25H2, so pass version as well for 10: `auto 21H2 MediaCreationTool.bat`_  
+> _- auto defaults to 11 26H2, so pass version as well for 10: `auto 21H2 MediaCreationTool.bat`_  
 
 2 ***Auto ISO*** with detected media in current folder directly _(or C:\ESD if run from zip)_
 > _- can override detected media by adding edition name / language / arch to script name_
@@ -71,6 +72,17 @@ Finally, it sets recommended setup options with least amount of issues on upgrad
 >
 > Can even add a VL / MAK / retail product key in the same way to take care of licensing differences.  
 > The script also picks up any `$ISO$` folder in the current location - for $OEM$ branding, configuration, tweaks etc.  
+
+Windows 11 26H2 media notes  
+---------------------------  
+26H2 catalog: `utils/products11_26H2.cab` = the **untouched** `products.xml` served to the current MCT  
+(Catalog v2.1, `Sha256` entries), build **26300.9457.260913-1737** (GA), all languages, x64 + ARM64,  
+every ESD link on `dl.delivery.mp.microsoft.com`.  
+> _- 26H2 uses the **newer MCT exe** (`download.microsoft.com/download/0a8b07d9-.../MediaCreationTool.exe`) which_  
+> _understands the v2.1 / Sha256 schema - the 24H2-era MCT used for 25H2 would fail with `0x80070490`_  
+> _- spot-checked: SHA-256 of en-US/es-ES Consumer x64 and en-US Business x64 match an independent listing_  
+> _- same sanity check applies: aborts if the catalog does not list 26300_  
+> _- CPU must support POPCNT (SSE4.2) - 24H2+ hard requirement, cannot be bypassed_  
 
 Windows 11 25H2 media notes  
 ---------------------------  
@@ -177,4 +189,9 @@ _We did it! We broke [the previous gist](https://git.io/MediaCreationTool.bat)_ 
             Download Center products.xml (Sha256 schema -> MCT selfhost 0x80070490)
             sanity check aborts with a clear error if the catalog does not list the requested version (no silent wrong media)
             added guard clearing stale per-version cab when an XML source is defined (downloader skips existing files)
+2026.10.02: Windows 11 26H2 support - build 26300.9457 (September 2026 GA), now the default choice
+            catalog utils/products11_26H2.cab: untouched MCT products.xml (v2.1, Sha256, MS-hosted ESD links)
+            26H2 uses the newer MCT exe that accepts the v2.1/Sha256 schema (old exe -> 0x80070490)
+            fixed: choices 15+ (all Windows 11 versions) were lost after UAC self-elevation (range was < 15)
+            25H2 auto-upgrade "choose media" stall workaround also applied to 26H2
 ```
